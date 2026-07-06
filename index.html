@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 臨床端巡房速報服務</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-100 text-slate-800 p-4">
+    <div class="max-w-md mx-auto bg-white rounded-2xl p-6 shadow-md border border-slate-200 mt-4">
+        <h3 class="text-xl font-bold mb-4 text-slate-700 border-b pb-2 text-center">
+            <i class="fas fa-ambulance mr-2 text-teal-600"></i>醫護巡房即時通報系統
+        </h3>
+        <form id="reportForm" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-600 mb-1">通報人員</label>
+                    <input type="text" id="reporter" placeholder="例如：林護理師" required class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-600 mb-1">所屬單位/病房</label>
+                    <input type="text" id="unit" placeholder="例如：5A病房" required class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">問題 / 報修類別</label>
+                <select id="category" required class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-white">
+                    <option value="" disabled selected>請選擇項目</option>
+                    <option value="醫療儀器故障">🚨 醫療儀器故障</option>
+                    <option value="資訊設備報修">💻 資訊設備報修</option>
+                    <option value="衛材急缺遞補">📦 衛材急缺遞補</option>
+                    <option value="病房環境維修">🔧 病房環境維修</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-600 mb-1">急迫程度</label>
+                    <select id="urgency" required class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-white">
+                        <option value="一般">🟢 一般</option>
+                        <option value="緊急">🟡 緊急</option>
+                        <option value="特急">🔴 特急</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-600 mb-1">財編 / 衛材品名</label>
+                    <input type="text" id="itemDetail" placeholder="品名或財編" required class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">狀況具體描述</label>
+                <textarea id="description" rows="2" placeholder="請簡單說明故障狀況..." required class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none resize-none"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">現場拍照上傳</label>
+                <div class="mt-1 flex justify-center px-4 pt-4 pb-4 border-2 border-slate-300 border-dashed rounded-xl bg-slate-50 relative">
+                    
+
+                        
+                        
+
+點擊開啟相機拍照
+
+
+                    
+
+                    <input id="fileInput" type="file" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" required>
+                </div>
+                <div id="previewContainer" class="mt-2 hidden text-center">
+                    <img id="imagePreview" class="max-h-32 mx-auto rounded-lg shadow-sm border">
+                </div>
+            </div>
+            <button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-teal-600 to-cyan-600 text-white font-bold py-3 rounded-xl shadow transition">
+                <i class="fas fa-paper-plane mr-2"></i>發射真實通報
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // 🛠️ 實戰串接關鍵：請將下方的網址替換成您在 Apps Script 部署得到的「網頁應用程式 URL」
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwFktXmM6brjJhZXMx2Of2f2afo4Mvp4Vf_d7W91gK89OtEMZZUbO6DmhimOA4Oy_x-9g/exec";
+
+        const fileInput = document.getElementById('fileInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewContainer = document.getElementById('previewContainer');
+        let base64Image = "";
+        let imageName = "";
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                imageName = file.name;
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    imagePreview.src = event.target.result;
+                    base64Image = event.target.result; // 這裏拿到含 Data URI Header 的 Base64
+                    previewContainer.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('reportForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-circle-notch animate-spin mr-2"></i>實時傳輸中...';
+
+            // 打包將送往後端的 JSON 禮物盒
+            const payload = {
+                reporter: document.getElementById('reporter').value,
+                unit: document.getElementById('unit').value,
+                category: document.getElementById('category').value,
+                urgency: document.getElementById('urgency').value,
+                itemDetail: document.getElementById('itemDetail').value,
+                description: document.getElementById('description').value,
+                imageData: base64Image,
+                imageName: imageName
+            };
+
+            fetch(WEB_APP_URL, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.result === "success") {
+                    alert('🎉 通報成功！資料已寫入雲端大白板，照片也已存入資料夾！');
+                    document.getElementById('reportForm').reset();
+                    previewContainer.classList.add('hidden');
+                    base64Image = "";
+                } else {
+                    alert('❌ 失敗：' + data.message);
+                }
+            })
+            .catch(err => alert('❌ 連線發生錯誤：' + err))
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>發射真實通報';
+            });
+        });
+    </script>
+</body>
+</html>
